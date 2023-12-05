@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install -y cron curl python3.10, python3-pip \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install -y cron curl python3.10 python3-pip \
     # Remove package lists for smaller image sizes
     && rm -rf /var/lib/apt/lists/* \
     && which cron \
@@ -9,6 +9,8 @@ RUN apt-get update \
 
 COPY crontab /hello-cron
 COPY entrypoint.sh /entrypoint.sh
+
+COPY jobs/requirements.txt .
 COPY jobs /jobs
 
 RUN crontab hello-cron
@@ -17,7 +19,7 @@ RUN chmod 755 /usr/bin/python3.10
 
 RUN ln -s /usr/bin/python3.10 /usr/bin/python
 
-RUN pip install -r /jobs/requirements.txt
+RUN pip install -r requirements.txt
 
 ENTRYPOINT ["/entrypoint.sh"]
 
