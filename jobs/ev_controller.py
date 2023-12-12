@@ -53,10 +53,11 @@ if __name__ == '__main__':
 
     results = db.execute(sql).fetchall()
 
+    transactions_ended = 0
+
     try:
         if results:
             print(f"Found {len(results)} EVSE transactions in progress...")
-            transactions_ended = 0
 
             # mqtt_client = mqtt_model.new_mqtt_client()  # (, clean_session=False)
             mqtt_client.connect(os.getenv('MQTT_BROKER'), int(os.getenv('MQTT_PORT')))  # establish connection
