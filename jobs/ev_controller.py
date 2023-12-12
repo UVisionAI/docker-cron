@@ -41,6 +41,8 @@ if __name__ == '__main__':
 
     now = datetime.now()
 
+    print("Starting ev controller...")
+
     # get all transactions in progress
     sql = text("""
         SELECT id, charger_id, payment_id, id_tag, start_time, end_time, actual_start_time, target_end_time, 
@@ -53,6 +55,9 @@ if __name__ == '__main__':
 
     try:
         if results:
+            print(f"Found {len(results)} EVSE transactions in progress...")
+            transactions_ended = 0
+
             # mqtt_client = mqtt_model.new_mqtt_client()  # (, clean_session=False)
             mqtt_client.connect(os.getenv('MQTT_BROKER'), int(os.getenv('MQTT_PORT')))  # establish connection
 
@@ -79,6 +84,13 @@ if __name__ == '__main__':
                     mqtt_client.publish(topic, str(json.dumps(payload)), qos=0, retain=False)
 
                     logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
+
+                    transactions_ended += 1
+
+        else:
+            print("No EVSE transactions in progress...")
+
+        print(f"{transactions_ended} EVSE transactions ended...")
 
     except Exception as e:
         logging.error(f"Exception: {e}")
