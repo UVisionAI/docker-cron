@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import time
 
 import paho.mqtt.client as mqtt
 from sqlalchemy import text, create_engine
@@ -30,9 +31,12 @@ def generate_topic(charger_name):
 if __name__ == '__main__':
     load_dotenv()
 
+    os.environ['TZ'] = 'Asia/Hong_Kong'
+    time.tzset()
+    logging.info(f"Timezone: {time.tzname}")
+
     mqtt_client = mqtt.Client()  # (, clean_session=False)
     mqtt_client.username_pw_set(os.getenv('MQTT_USERNAME'), os.getenv('MQTT_PASSWORD'))
-    
 
     db_uri = os.getenv('DB_URI')
     engine = create_engine(db_uri)  # echo=True for debugging
