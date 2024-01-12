@@ -52,7 +52,7 @@ if __name__ == '__main__':
         SELECT id, charger_id, payment_id, id_tag, start_time, end_time, actual_start_time, target_end_time, 
         actual_end_time, actual_duration, duration, meter_start, meter_stop, status, date_created, date_modified
         FROM ev_transaction
-        WHERE status <> 'remote_stop' AND status <> 'finished' AND (target_end_time <= NOW() OR end_time <= NOW())
+        WHERE status <> 'remote_stop' AND status <> 'finished' AND (target_end_time <= NOW() OR (end_time <= NOW() AND target_end_time IS NULL))
     """)
 
     results = db.execute(sql).fetchall()
