@@ -90,11 +90,11 @@ if __name__ == '__main__':
                     logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
 
                     # Revert transaction timeout to 5 mins
-                    payload = {"action": "ChangeConfiguration",
-                               "args": {"key":"ConnectionTimeOut", "value":"300"}}
-                    mqtt_client.publish(topic, str(json.dumps(payload)))
+                    # payload = {"action": "ChangeConfiguration",
+                    #            "args": {"key":"ConnectionTimeOut", "value":"300"}}
+                    # mqtt_client.publish(topic, str(json.dumps(payload)))
 
-                    logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
+                    #logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
 
                     transactions_ended += 1
 
