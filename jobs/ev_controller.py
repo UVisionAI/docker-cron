@@ -85,8 +85,7 @@ if __name__ == '__main__':
                     payload = {"action": "RemoteStopTransaction",
                                "args": {"transaction_id": r.id}}
 
-                    # mqtt_model.publish(mqtt_client, topic, payload, qos=2, retain=True)
-                    mqtt_client.publish(topic, str(json.dumps(payload)), qos=0, retain=False)
+                    mqtt_client.publish(topic, str(json.dumps(payload)), qos=1)
                     logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
 
                     # Revert transaction timeout to 5 mins
