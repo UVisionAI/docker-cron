@@ -97,7 +97,6 @@ if __name__ == '__main__':
                     )
                     db.execute(sql)
 
-
                     # Revert transaction timeout to 5 mins
                     # payload = {"action": "ChangeConfiguration",
                     #            "args": {"key":"ConnectionTimeOut", "value":"300"}}
