@@ -52,7 +52,7 @@ if __name__ == '__main__':
         SELECT id, charger_id, payment_id, id_tag, start_time, end_time, actual_start_time, target_end_time, 
         actual_end_time, actual_duration, duration, meter_start, meter_stop, status, date_created, date_modified
         FROM ev_transaction
-        WHERE status <> 'remote_stop' AND status <> 'finished' AND (target_end_time <= NOW() OR (end_time <= NOW() AND target_end_time IS NULL))
+        WHERE status <> 'created' AND status <> 'remote_stop' AND status <> 'finished' AND (target_end_time <= NOW() OR (end_time <= NOW() AND target_end_time IS NULL))
     """)
 
     results = db.execute(sql).fetchall()
@@ -87,6 +87,16 @@ if __name__ == '__main__':
 
                     mqtt_client.publish(topic, str(json.dumps(payload)), qos=1)
                     logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
+
+                    sql = text("""
+                            UPDATE ev_transaction SET comment = CONCAT(comment, :comment)
+                            WHERE id = :id
+                        """).bindparams(
+                        comment=f"Remotely stopped by cronjob. ",
+                        id=r.id
+                    )
+                    db.execute(sql)
+
 
                     # Revert transaction timeout to 5 mins
                     # payload = {"action": "ChangeConfiguration",
