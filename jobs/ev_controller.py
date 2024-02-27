@@ -31,8 +31,8 @@ def generate_topic(charger_name):
 if __name__ == '__main__':
     load_dotenv()
 
-    os.environ['TZ'] = 'Asia/Hong_Kong'
-    time.tzset()
+    # os.environ['TZ'] = 'Asia/Hong_Kong'
+    # time.tzset()
     logging.info(f"Timezone: {time.tzname}")
 
     mqtt_client = mqtt.Client()  # (, clean_session=False)
