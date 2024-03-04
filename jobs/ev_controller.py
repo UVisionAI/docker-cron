@@ -89,7 +89,7 @@ if __name__ == '__main__':
                     logging.debug(f"Publish: {topic}, {str(json.dumps(payload))}")
 
                     sql = text("""
-                            UPDATE ev_transaction SET comment = CONCAT(comment, :comment)
+                            UPDATE ev_transaction SET comment = CONCAT(COALESCE(comment, ''), :comment)
                             WHERE id = :id
                         """).bindparams(
                         comment=f"Remotely stopped by cronjob. ",
@@ -107,7 +107,7 @@ if __name__ == '__main__':
                     transactions_ended += 1
 
         else:
-            print("No EVSE transactions in progress...")
+            print("No expiring EVSE transactions...")
 
         print(f"{transactions_ended} EVSE transactions ended...")
 
