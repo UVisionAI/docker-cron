@@ -92,11 +92,26 @@ def get_last_day_of_month(date_obj):
 
 def get_supported_carparks():
     # first get all carparks that support monthly parking syncing and payment
-    sql = text("""
+    sql_excluded = ""
+    if os.getenv('EXCLUDED_CARPARK_IDS') is not None and os.getenv('EXCLUDED_CARPARK_IDS') != "":
+        excluded_carparks = os.getenv('EXCLUDED_CARPARK_IDS').split(",")
+        sql_excluded = " AND carpark.id NOT IN :excluded_carparks"
+        print(f"SQL excluded carparks: {excluded_carparks}")
+
+    if sql_excluded:
+        sql = text(f"""
             SELECT carpark_config.carpark_id FROM carpark_config 
             WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
-                AND carpark_config.enable_monthly_rental = 1
+                AND carpark_config.enable_monthly_rental = 1 
         """)
+    else:
+        sql = text(f"""
+                    SELECT carpark_config.carpark_id FROM carpark_config 
+                    WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
+                        AND carpark_config.enable_monthly_rental = 1 
+                        {sql_excluded}
+                """).bindparams(excluded_carparks=excluded_carparks)
+
     cursor = db.engine.execute(sql)
     results = cursor.fetchall()
     carpark_ids = []
@@ -415,7 +430,7 @@ today = datetime.today()
 
 last_day_of_month = calendar.monthrange(today.year, today.month)[1]
 remaining_days = last_day_of_month - today.day
-# remaining_days = 5  # TODO: Comment this out
+remaining_days = 5  # TODO: Comment this out
 # print("Remaining days:", remaining_days)
 
 # only send payment reminder to users on the 25th, 28th and last day of the month
