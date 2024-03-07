@@ -92,13 +92,13 @@ def get_last_day_of_month(date_obj):
 
 def get_supported_carparks():
     # first get all carparks that support monthly parking syncing and payment
-    sql_excluded = ""
+    exclude_carpark_sql = None
     if os.getenv('EXCLUDED_CARPARK_IDS') is not None and os.getenv('EXCLUDED_CARPARK_IDS') != "":
-        excluded_carparks = os.getenv('EXCLUDED_CARPARK_IDS').split(",")
-        sql_excluded = " AND carpark.id NOT IN :excluded_carparks"
-        print(f"SQL excluded carparks: {excluded_carparks}")
+        excluded_carpark_ids = os.getenv('EXCLUDED_CARPARK_IDS').split(",")
+        exclude_carpark_sql = " AND carpark.id NOT IN :excluded_carpark_ids"
+        print(f"SQL excluded carparks: {excluded_carpark_ids}")
 
-    if sql_excluded:
+    if exclude_carpark_sql:
         sql = text(f"""
             SELECT carpark_config.carpark_id FROM carpark_config 
             WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
@@ -109,8 +109,8 @@ def get_supported_carparks():
                     SELECT carpark_config.carpark_id FROM carpark_config 
                     WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
                         AND carpark_config.enable_monthly_rental = 1 
-                        {sql_excluded}
-                """).bindparams(excluded_carparks=excluded_carparks)
+                        {exclude_carpark_sql}
+                """).bindparams(excluded_carpark_ids=excluded_carpark_ids)
 
     cursor = db.engine.execute(sql)
     results = cursor.fetchall()
