@@ -1,5 +1,6 @@
 # Send payment reminder SMSes to monthly parking customers to ask them to pay up
 import os, requests, logging, calendar, string, secrets, traceback
+
 from dotenv import load_dotenv
 from sqlalchemy import text, create_engine
 from datetime import datetime
@@ -91,26 +92,25 @@ def get_last_day_of_month(date_obj):
 
 
 def get_supported_carparks():
-    # first get all carparks that support monthly parking syncing and payment
     exclude_carpark_sql = None
     if os.getenv('EXCLUDED_CARPARK_IDS') is not None and os.getenv('EXCLUDED_CARPARK_IDS') != "":
         excluded_carpark_ids = os.getenv('EXCLUDED_CARPARK_IDS').split(",")
-        exclude_carpark_sql = " AND carpark.id NOT IN :excluded_carpark_ids"
+        exclude_carpark_sql = " AND carpark_id NOT IN :excluded_carpark_ids"
         print(f"SQL excluded carparks: {excluded_carpark_ids}")
 
-    if exclude_carpark_sql:
+    if not exclude_carpark_sql:
         sql = text(f"""
-            SELECT carpark_config.carpark_id FROM carpark_config 
-            WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
-                AND carpark_config.enable_monthly_rental = 1 
-        """)
+                SELECT carpark_config.carpark_id FROM carpark_config
+                WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1)
+                    AND carpark_config.enable_monthly_rental = 1
+            """)
     else:
         sql = text(f"""
-                    SELECT carpark_config.carpark_id FROM carpark_config 
-                    WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1) 
-                        AND carpark_config.enable_monthly_rental = 1 
-                        {exclude_carpark_sql}
-                """).bindparams(excluded_carpark_ids=excluded_carpark_ids)
+                        SELECT carpark_config.carpark_id FROM carpark_config
+                        WHERE (accept_online_payment = 1 OR accept_octopus_payment = 1)
+                            AND carpark_config.enable_monthly_rental = 1
+                            {exclude_carpark_sql}
+                    """).bindparams(excluded_carpark_ids=excluded_carpark_ids)
 
     cursor = db.engine.execute(sql)
     results = cursor.fetchall()
@@ -120,6 +120,7 @@ def get_supported_carparks():
         carpark_ids.append(r.carpark_id)
 
     return carpark_ids
+
 
 
 def get_unpaid_users(carpark_ids, date_var=datetime.today()):
@@ -140,6 +141,7 @@ def get_unpaid_users(carpark_ids, date_var=datetime.today()):
         month_start=this_month_start,
         month_end=this_month_end
     )
+
     paid_users = db.engine.execute(sql).fetchall()
 
     paid_user_ids = []
@@ -149,22 +151,24 @@ def get_unpaid_users(carpark_ids, date_var=datetime.today()):
     next_month_start = this_month_start + relativedelta(months=1)
     next_month_end = get_last_day_of_month(next_month_start)
 
-    # next filter out all the above users and get those who have paid next month's rent as well
-    sql = text("""
-        SELECT user_carpark_rental.user_id, user_carpark_rental.id as rental_id
-            FROM user_carpark_rental 
-        INNER JOIN payment ON payment.rental_id = user_carpark_rental.id AND payment.status = :payment_status 
-        WHERE user_carpark_rental.user_id IN :paid_user_ids AND start_date >= :month_start AND end_date <= :month_end
-    """).bindparams(
-        payment_status=PAYMENT_STATUS_PAID,
-        paid_user_ids=paid_user_ids,
-        month_start=next_month_start,
-        month_end=next_month_end
-    )
-    next_paid_users = db.engine.execute(sql).fetchall()
     next_paid_user_ids = []
-    for u in next_paid_users:
-        next_paid_user_ids.append(u.user_id)
+    if paid_user_ids:
+        # next filter out all the above users and get those who have paid next month's rent as well
+        sql = text("""
+            SELECT user_carpark_rental.user_id, user_carpark_rental.id as rental_id
+                FROM user_carpark_rental 
+            INNER JOIN payment ON payment.rental_id = user_carpark_rental.id AND payment.status = :payment_status 
+            WHERE user_carpark_rental.user_id IN :paid_user_ids AND start_date >= :month_start AND end_date <= :month_end
+        """).bindparams(
+            payment_status=PAYMENT_STATUS_PAID,
+            paid_user_ids=paid_user_ids,
+            month_start=next_month_start,
+            month_end=next_month_end
+        )
+        next_paid_users = db.engine.execute(sql).fetchall()
+
+        for u in next_paid_users:
+            next_paid_user_ids.append(u.user_id)
 
     # then loop thru this month's paid user list and remove all users who have paid next month's rent (keeping only users who paid this month's rent but not next month's)
     unpaid_users = copy(paid_users)
@@ -219,10 +223,12 @@ def send_payment_reminder():
     for u in users:
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.id as carpark_id, carpark.url_name, user.name, user.email, 
-            mobile.user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, carpark_config.accept_octopus_payment, carpark_config.accept_online_payment  
+            mobile.user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, carpark_config.accept_octopus_payment, carpark_config.accept_online_payment,
+            user_carpark.special_rate  
             FROM mobile
             INNER JOIN user ON user.id = mobile.user_id AND user.date_deleted IS NULL
             INNER JOIN carpark ON carpark.id = :carpark_id
+            INNER JOIN user_carpark ON user_carpark.user_id = user.id AND user_carpark.carpark_id = carpark.id
             INNER JOIN carpark_config ON carpark_config.carpark_id = carpark.id AND carpark_config.enable_monthly_rental = 1 
                 AND (carpark_config.accept_online_payment = 1 OR carpark_config.accept_octopus_payment = 1)
             INNER JOIN vehicle ON user.id = vehicle.user_id AND vehicle.carpark_id = :carpark_id AND vehicle.is_default = 1
@@ -284,7 +290,7 @@ def send_payment_reminder():
         else:
             content = content.replace("{days}", f"{remaining_days}日後")
 
-        content = content.replace("{amount}", f"${contact.monthly_rent_rate}")
+        content = content.replace("{amount}", f"${contact.special_rate or contact.monthly_rent_rate}")
 
         token_length = 8
         alphabet = string.ascii_letters + string.digits
@@ -367,10 +373,11 @@ def email_unpaid_customer_summary():
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.url_name, user.name, user.email, 
             user.id as user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, 
-            payment_method.name_cn as payment_method_name_cn, vehicle.license
+            payment_method.name_cn as payment_method_name_cn, vehicle.license, user_carpark.special_rate
             FROM mobile
             INNER JOIN user ON user.id = mobile.user_id AND user.date_deleted IS NULL
             INNER JOIN carpark ON carpark.id = :carpark_id
+            INNER JOIN user_carpark ON user_carpark.user_id = user.id AND user_carpark.carpark_id = carpark.id
             LEFT JOIN payment_method ON payment_method.id = user.preferred_payment_method
             INNER JOIN vehicle ON user.id = vehicle.user_id AND vehicle.carpark_id = :carpark_id AND vehicle.is_default = 1
             INNER JOIN carpark_vehicle_type ON carpark_vehicle_type.vehicle_type_id = vehicle.vehicle_type_id AND carpark_vehicle_type.carpark_id = carpark.id
@@ -393,7 +400,7 @@ def email_unpaid_customer_summary():
             'email': contact.email,
             'license': contact.license,
             'preferred_payment_method': contact.payment_method_name_cn or '--',
-            'rate': contact.monthly_rent_rate
+            'rate': contact.special_rate or contact.monthly_rent_rate
         })
 
         user_count += 1
@@ -429,8 +436,8 @@ today = datetime.today()
 # today = datetime(2023, 8, 31)  # TODO: Comment out this line
 
 last_day_of_month = calendar.monthrange(today.year, today.month)[1]
-remaining_days = last_day_of_month - today.day
-remaining_days = 5  # TODO: Comment this out
+#remaining_days = last_day_of_month - today.day
+remaining_days = 2  # TODO: Comment this out
 # print("Remaining days:", remaining_days)
 
 # only send payment reminder to users on the 25th, 28th and last day of the month
