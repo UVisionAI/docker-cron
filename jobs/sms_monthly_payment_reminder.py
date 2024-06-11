@@ -288,7 +288,8 @@ def send_payment_reminder():
         if remaining_days == 0:
             content = content.replace("{days}", "聽日")
         else:
-            content = content.replace("{days}", f"{remaining_days}日後")
+            content = content.replace("{days}", "就快")
+            #content = content.replace("{days}", f"{remaining_days}日後")
 
         content = content.replace("{amount}", f"${contact.special_rate or contact.monthly_rent_rate}")
 
@@ -436,14 +437,15 @@ today = datetime.today()
 # today = datetime(2023, 8, 31)  # TODO: Comment out this line
 
 last_day_of_month = calendar.monthrange(today.year, today.month)[1]
-#remaining_days = last_day_of_month - today.day
-remaining_days = 2  # TODO: Comment this out
+remaining_days = last_day_of_month - today.day
+#remaining_days = 2  # TODO: Comment this out
 # print("Remaining days:", remaining_days)
 
 # only send payment reminder to users on the 25th, 28th and last day of the month
-if remaining_days == 5 or remaining_days == 2 or remaining_days == 0:
+#if remaining_days == 5 or remaining_days == 2 or remaining_days == 0:
+if remaining_days == 5 or remaining_days == 7:
     send_payment_reminder()
 
 # only send unpaid customer list to staff on 1st day of month and 3 days before end of month
-if today.day == 1 or remaining_days == 2:
+if today.day == 1 or remaining_days == 4:
     email_unpaid_customer_summary()
