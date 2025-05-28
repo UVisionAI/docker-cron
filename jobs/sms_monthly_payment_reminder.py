@@ -132,7 +132,7 @@ def get_unpaid_users(carpark_ids, date_var=datetime.today()):
         SELECT user_carpark_rental.user_id, user_carpark_rental.id as rental_id, 
         user_carpark_rental.carpark_id, carpark.name as carpark_name, start_date 
         FROM user_carpark_rental
-        INNER JOIN carpark ON carpark.id = user_carpark_rental.carpark_id
+        INNER JOIN carpark ON carpark.id = user_carpark_rental.carpark_id AND carpark.date_deleted IS NULL
         INNER JOIN payment ON payment.rental_id = user_carpark_rental.id AND payment.status = :payment_status
         WHERE user_carpark_rental.carpark_id IN :carpark_ids AND start_date >= :month_start AND end_date <= :month_end
     """).bindparams(
@@ -221,13 +221,16 @@ def send_payment_reminder():
     email_summary = ""
 
     for u in users:
+        if u.carpark_id == 28: # TODO: Remove this line once YTR (TC 成發東涌迎東路) car park is synced correctly
+            continue
+
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.id as carpark_id, carpark.url_name, user.name, user.email, 
             mobile.user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, carpark_config.accept_octopus_payment, carpark_config.accept_online_payment,
             user_carpark.special_rate  
             FROM mobile
             INNER JOIN user ON user.id = mobile.user_id AND user.date_deleted IS NULL
-            INNER JOIN carpark ON carpark.id = :carpark_id
+            INNER JOIN carpark ON carpark.id = :carpark_id AND carpark.date_deleted IS NULL
             INNER JOIN user_carpark ON user_carpark.user_id = user.id AND user_carpark.carpark_id = carpark.id
             INNER JOIN carpark_config ON carpark_config.carpark_id = carpark.id AND carpark_config.enable_monthly_rental = 1 
                 AND (carpark_config.accept_online_payment = 1 OR carpark_config.accept_octopus_payment = 1)
@@ -371,13 +374,16 @@ def email_unpaid_customer_summary():
     email_content = "現在有{user_count}個月租客還沒付" + last_month.strftime("%-m") + "月的租金：<br/>"
 
     for u in users:
+        if u.carpark_id == 28: #TODO remove this once TC carpark has been correctly synchronised
+            continue
+        
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.url_name, user.name, user.email, 
             user.id as user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, 
             payment_method.name_cn as payment_method_name_cn, vehicle.license, user_carpark.special_rate
             FROM mobile
             INNER JOIN user ON user.id = mobile.user_id AND user.date_deleted IS NULL
-            INNER JOIN carpark ON carpark.id = :carpark_id
+            INNER JOIN carpark ON carpark.id = :carpark_id AND carpark.date_deleted IS NULL
             INNER JOIN user_carpark ON user_carpark.user_id = user.id AND user_carpark.carpark_id = carpark.id
             LEFT JOIN payment_method ON payment_method.id = user.preferred_payment_method
             INNER JOIN vehicle ON user.id = vehicle.user_id AND vehicle.carpark_id = :carpark_id AND vehicle.is_default = 1
