@@ -221,7 +221,7 @@ def send_payment_reminder():
     email_summary = ""
 
     for u in users:
-        if u.carpark_id == 28: # TODO: Remove this line once YTR (TC 成發東涌迎東路) car park is synced correctly
+        if u.carpark_id in (22, 23, 28): # TODO: Remove this line once YTR (TC 成發東涌迎東路) car park is synced correctly
             continue
 
         sql = text("""
