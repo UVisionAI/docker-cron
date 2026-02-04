@@ -17,8 +17,5 @@ if [ ! -f "$SCRIPT_NAME" ]; then
   exit 1
 fi
 
-# Change "my_script.py" to your actual script
-python "$SCRIPT_NAME" "$@" >> /opt/jobs/logs/"${SCRIPT_NAME%.py}.log" 2>&1
-
-
+python3 "$SCRIPT_NAME" "$@" >> /opt/jobs/logs/"${SCRIPT_NAME%.py}.log" 2>&1
 
