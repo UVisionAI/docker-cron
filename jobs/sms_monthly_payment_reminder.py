@@ -278,7 +278,7 @@ def send_payment_reminder():
             msgid = 6
         elif contact.accept_octopus_payment == 1:
             # if only Octopus payment supported, use below custom message
-            content = "「{carpark_name}」你的月租車位{days}會過期了。請盡快去停車場用已登記八達通卡繳付下個月{amount}的租金。多謝支持。"
+            content = "「{carpark_name}」你的月租車位就快會過期了。請盡快去停車場用已登記八達通卡繳付下個月{amount}的租金。多謝支持。"
             msgid = 5
         else:
             print(
@@ -286,12 +286,6 @@ def send_payment_reminder():
             continue
 
         content = content.replace("{carpark_name}", f"{contact.carpark_name}車場")
-
-        if remaining_days == 0:
-            content = content.replace("{days}", "聽日")
-        else:
-            content = content.replace("{days}", "就快")
-            #content = content.replace("{days}", f"{remaining_days}日後")
 
         content = content.replace("{amount}", f"${contact.special_rate or contact.monthly_rent_rate}")
 
@@ -449,10 +443,10 @@ remaining_days = last_day_of_month - today.day
 # print("Remaining days:", remaining_days)
 
 #if remaining_days == 5 or remaining_days == 2:
-# only send payment reminder to users if today is not the 1st of the month
+# only send payment reminder to customers if today is NOT the 1st of the month
 if today.day != 1:
     send_payment_reminder()
 
-# only send unpaid customer summary to staff on 1st day of month and less than 5 days before end of month
+# only send unpaid customer summary to staff on 1st day of month and less than 3 days before end of month
 if today.day == 1 or remaining_days <= 3:
     email_unpaid_customer_summary()
