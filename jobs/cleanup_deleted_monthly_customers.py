@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, logging
 from dotenv import load_dotenv
 from sqlalchemy import text, create_engine
 from sqlalchemy.orm import sessionmaker
@@ -24,13 +24,17 @@ try:
     print("Expired user_login_tokens deleted")
 
 except Exception as e:
-    print(e)
+    logging.error(e)
     session.rollback()
     print(e)
 
 # First get all customers who have been flagged for deletion over a week ago
 sql = text("""
-    SELECT user.id FROM user WHERE user.date_deleted < DATE_SUB(NOW(), INTERVAL 14 DAY)
+    SELECT user.id, payment.id AS payment_id
+    FROM user
+    LEFT JOIN payment ON payment.user_id = user.id 
+    WHERE user.date_deleted < DATE_SUB(NOW(), INTERVAL 14 DAY)
+        AND payment.user_id IS NULL
     """)
 cursor = db.engine.execute(sql)
 users = cursor.fetchall()
@@ -42,58 +46,59 @@ if not users:
 print(f"{len(users)} flagged for deletion")
 for user in users:
     try:
-        print(f"Deleting user_id: {user.id}")
-        sql = text("""
-                    DELETE from octopus where user_id = :user_id
-                """).bindparams(user_id=user.id)
-        result = session.execute(sql)
-
-        sql = text("""
-                        DELETE from user_carpark where user_id = :user_id
+        if not user.payment_id: # Only delete user if no payment records exist
+            print(f"Deleting user_id: {user.id}")
+            sql = text("""
+                        DELETE from octopus where user_id = :user_id
                     """).bindparams(user_id=user.id)
-        result = session.execute(sql)
+            session.execute(sql)
 
-        sql = text("""
-                DELETE from user_carpark_rental where user_id = :user_id
-            """).bindparams(user_id=user.id)
-        result = session.execute(sql)
+            sql = text("""
+                            DELETE from user_carpark where user_id = :user_id
+                        """).bindparams(user_id=user.id)
+            session.execute(sql)
 
-        sql = text("""
-                UPDATE user_message_log SET user_id=NULL where user_id = :user_id
-            """).bindparams(user_id=user.id)
-        result = session.execute(sql)
-
-        sql = text("""
-                DELETE from vehicle where user_id = :user_id
-            """).bindparams(user_id=user.id)
-        result = session.execute(sql)
-
-        sql = text("""
-                    DELETE from mobile where user_id = :user_id
+            sql = text("""
+                    DELETE from user_carpark_rental where user_id = :user_id
                 """).bindparams(user_id=user.id)
-        result = session.execute(sql)
+            session.execute(sql)
 
-        sql = text("""
-                DELETE FROM user_login_token WHERE user_id = :user_id 
+            sql = text("""
+                    UPDATE user_message_log SET user_id=NULL where user_id = :user_id
+                """).bindparams(user_id=user.id)
+            session.execute(sql)
+
+            sql = text("""
+                    DELETE from vehicle where user_id = :user_id
+                """).bindparams(user_id=user.id)
+            session.execute(sql)
+
+            sql = text("""
+                        DELETE from mobile where user_id = :user_id
+                    """).bindparams(user_id=user.id)
+            session.execute(sql)
+
+            sql = text("""
+                    DELETE FROM user_login_token WHERE user_id = :user_id 
+                """).bindparams(user_id=user.id)
+            session.execute(sql)
+
+            sql = text("""
+                    DELETE FROM user_login_token WHERE user_id = :user_id 
+                """).bindparams(user_id=user.id)
+            session.execute(sql)
+
+            # Delete all customer details from related tables
+            sql = text("""
+                DELETE from user where id = :user_id
             """).bindparams(user_id=user.id)
-        result = session.execute(sql)
+            session.execute(sql)
 
-        sql = text("""
-                DELETE FROM user_login_token WHERE user_id = :user_id 
-            """).bindparams(user_id=user.id)
-        result = session.execute(sql)
+            session.commit()
 
-        # Delete all customer details from related tables
-        sql = text("""
-            DELETE from user where id = :user_id
-        """).bindparams(user_id=user.id)
-        result = session.execute(sql)
-
-        session.commit()
-
-        print(f"Deleted user: {user.id}")
+            logging.info(f"Deleted user: {user.id}")
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         session.rollback()
         continue
