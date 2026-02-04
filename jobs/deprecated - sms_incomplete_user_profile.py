@@ -1,5 +1,9 @@
 # Send incomplete profile reminder SMSes to monthly parking customers
 
+# TODO: THIS SCRIPT HAS BEEN DISABLED ON DIGITAL OCEAN CRONJOBS, AS I DON'T THINK WE NEED
+#   TO SEND SMS'S TO USERS WITH INCOMPLETE PROFILES - IT'S UNNECESSARY AS USERS WILL FILL IT
+#   IN IF THEY ARE INTERESTED IN BOOKING MONTHLY CARPARK
+
 import os, requests, logging
 from dotenv import load_dotenv
 from sqlalchemy import text, create_engine
@@ -29,13 +33,14 @@ this_morning = datetime.strftime(now, '%Y-%m-%d 5:00:00')
 
 # get all users with incomplete profile
 sql = text("""
-    SELECT mobile.number, mobile.user_id 
+    SELECT mobile.number, mobile.user_id, user.name, user_carpark_rental.carpark_id
     FROM mobile
     INNER JOIN user ON user.id = mobile.user_id AND user.date_created <= :this_morning AND user.date_deleted IS NULL
     LEFT JOIN user_message_log ON user.id = user_message_log.user_id AND user_message_log.message_id = :message_id
     LEFT JOIN octopus ON user.id = octopus.user_id 
     LEFT JOIN vehicle ON user.id = vehicle.user_id
     INNER JOIN user_carpark_rental ON user_carpark_rental.carpark_id = :carpark_id AND user.id = user_carpark_rental.user_id
+    INNER JOIN carpark ON user_carpark_rental.carpark_id = carpark.id AND carpark.date_deleted IS NOT NULL
     WHERE octopus.id IS NULL AND vehicle.id IS NULL AND user_message_log.id IS NULL AND mobile.is_verified = 1 AND mobile.date_deleted IS NULL;
 """).bindparams(this_morning=this_morning, carpark_id=carpark_id, message_id=message_id)
 
@@ -61,6 +66,11 @@ for result in results:
     }
 
     print(params)
+
+    if not os.getenv('DEV'):
+        print(f"Dev mode - Skipping SMS for: {result.name} at carpark_id {result.carpark_id}")
+        continue
+    exit()
 
     response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params)
 
