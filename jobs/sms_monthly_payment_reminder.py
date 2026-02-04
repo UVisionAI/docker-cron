@@ -448,10 +448,11 @@ remaining_days = last_day_of_month - today.day
 #remaining_days = 2  # TODO: Comment this out
 # print("Remaining days:", remaining_days)
 
-# only send payment reminder to users if there are 5 days or 2 days before rent is due
 #if remaining_days == 5 or remaining_days == 2:
-send_payment_reminder()
+# only send payment reminder to users if today is not the 1st of the month
+if today.day != 1:
+    send_payment_reminder()
 
-# only send unpaid customer list to staff on 1st day of month and 3 days before end of month
-if today.day == 1 or remaining_days == 4:
+# only send unpaid customer summary to staff on 1st day of month and less than 5 days before end of month
+if today.day == 1 or remaining_days <= 3:
     email_unpaid_customer_summary()
