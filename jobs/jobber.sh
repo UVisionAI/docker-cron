@@ -17,5 +17,5 @@ if [ ! -f "$SCRIPT_NAME" ]; then
   exit 1
 fi
 
-python3 "$SCRIPT_NAME" "$@" >> /opt/jobs/logs/"${SCRIPT_NAME%.py}.log" 2>&1
+python3 "$SCRIPT_NAME" "$@" >> /opt/jobs/logs/"${SCRIPT_NAME%.py}.log"
 

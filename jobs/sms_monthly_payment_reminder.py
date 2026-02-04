@@ -20,6 +20,8 @@ db = None
 remaining_days = None
 today = None
 
+logging.basicConfig(level=logging.INFO)
+
 
 def send_sms(params):
     # Send SMS thru API gateway
@@ -221,9 +223,11 @@ def send_payment_reminder():
     email_summary = ""
 
     for u in users:
+        print("Car park ID:", u.carpark_id)
         if u.carpark_id in (22, 23, 28): # TODO: Remove this line once YTR (TC 成發東涌迎東路) car park is synced correctly
+            logging.info("2222123")
             continue
-
+        logging.info("123")
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.id as carpark_id, carpark.url_name, user.name, user.email, 
             mobile.user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, carpark_config.accept_octopus_payment, carpark_config.accept_online_payment,
@@ -243,7 +247,6 @@ def send_payment_reminder():
         contact = db.engine.execute(sql).fetchone()
 
         # print(contact)
-
         if contact is None:
             logging.error("No contact found for user ID: ", u.user_id)
             print("No contact found for user ID: ", u.user_id)
@@ -318,8 +321,11 @@ def send_payment_reminder():
             "message": content
         }
         # logging.debug(f"Send SMS params: {params}")
+        logging.info(os.getenv('DEV'))
+        continue
+
         if os.getenv('DEV'):
-            print(f"Mock SMS sent to uid {contact.user_id}:")
+            print(f"Mock SMS sent to uid: {contact.user_id}, name: {contact.name}, tel: {contact.number}")
             logging.info(params)
         else:
             send_sms(params)
@@ -447,10 +453,9 @@ remaining_days = last_day_of_month - today.day
 #remaining_days = 2  # TODO: Comment this out
 # print("Remaining days:", remaining_days)
 
-# only send payment reminder to users on the 25th, 28th and last day of the month
-#if remaining_days == 5 or remaining_days == 2 or remaining_days == 0:
-if remaining_days == 5 or remaining_days == 7:
-    send_payment_reminder()
+# only send payment reminder to users if there are 5 days or 2 days before rent is due
+#if remaining_days == 5 or remaining_days == 2:
+send_payment_reminder()
 
 # only send unpaid customer list to staff on 1st day of month and 3 days before end of month
 if today.day == 1 or remaining_days == 4:
