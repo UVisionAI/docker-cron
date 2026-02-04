@@ -20,9 +20,6 @@ db = None
 remaining_days = None
 today = None
 
-logging.basicConfig(level=logging.INFO)
-
-
 def send_sms(params):
     # Send SMS thru API gateway
     response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params)
@@ -72,7 +69,7 @@ def send_email(to, subject, content):
         response = sgrid.send(message)
 
         # print(response.status_code)
-        logging.debug(f"Response status code: {response.status_code}")
+        print(f"Response status code: {response.status_code}")
         return True
 
     except HTTPError as e:
@@ -225,9 +222,8 @@ def send_payment_reminder():
     for u in users:
         print("Car park ID:", u.carpark_id)
         if u.carpark_id in (22, 23, 28): # TODO: Remove this line once YTR (TC 成發東涌迎東路) car park is synced correctly
-            logging.info("2222123")
             continue
-        logging.info("123")
+
         sql = text("""
             SELECT mobile.number, carpark.name as carpark_name, carpark.id as carpark_id, carpark.url_name, user.name, user.email, 
             mobile.user_id, user.preferred_payment_method, carpark_vehicle_type.monthly_rent_rate, carpark_config.accept_octopus_payment, carpark_config.accept_online_payment,
@@ -246,7 +242,7 @@ def send_payment_reminder():
         """).bindparams(user_id=u.user_id, carpark_id=u.carpark_id)
         contact = db.engine.execute(sql).fetchone()
 
-        # print(contact)
+        print(contact)
         if contact is None:
             logging.error("No contact found for user ID: ", u.user_id)
             print("No contact found for user ID: ", u.user_id)
@@ -320,9 +316,7 @@ def send_payment_reminder():
             "mobileno": f"{country_code}{mobile_no}",
             "message": content
         }
-        # logging.debug(f"Send SMS params: {params}")
-        logging.info(os.getenv('DEV'))
-        continue
+        #logging.info(f"Send SMS params: {params}")
 
         if os.getenv('DEV'):
             print(f"Mock SMS sent to uid: {contact.user_id}, name: {contact.name}, tel: {contact.number}")
@@ -444,6 +438,7 @@ def email_unpaid_customer_summary():
 
 # Main program
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 today = datetime.today()
 # today = datetime(2023, 8, 31)  # TODO: Comment out this line
