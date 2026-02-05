@@ -281,7 +281,7 @@ def send_payment_reminder():
             msgid = 6
         elif contact.accept_octopus_payment == 1:
             # if only Octopus payment supported, use below custom message
-            content = "「{carpark_name}」月租車位即將到期: 請前往停車場以已登記八達通繳費。多謝支持。\n\nMonthly parking rent due: Please pay with registered Octopus card at the car park."
+            content = "「{carpark_name}」月租車位即將到期。請前往停車場以已登記八達通繳費。多謝支持。Monthly parking rent is due: Please pay with registered Octopus card at the car park."
             msgid = 5
         else:
             print(
