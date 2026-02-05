@@ -45,7 +45,9 @@ def send_sms(params):
     elif int(response.content.decode("utf-8")) < 0:
         logging.error(f"One Way SMS API returned error code: {response.content.decode('utf-8')}")
 
-    print("REAL SMS delivered to: ", params['mobileno'], " content: ", params['message'])
+    else:
+        logging.info(f"OneWaySMS response code: {response.content.decode('utf-8')}")
+        print("REAL SMS delivered to: ", params['mobileno'], " content: ", params['message'])
 
 
 def send_email(to, subject, content):
@@ -218,6 +220,7 @@ def send_payment_reminder():
     # print("Unpaid users: ", users)
 
     email_summary = ""
+    counter = 0
 
     for u in users:
         print("Car park ID:", u.carpark_id)
@@ -278,7 +281,7 @@ def send_payment_reminder():
             msgid = 6
         elif contact.accept_octopus_payment == 1:
             # if only Octopus payment supported, use below custom message
-            content = "「{carpark_name}」你的月租車位就快會過期了。請盡快去停車場用已登記八達通卡繳付下個月{amount}的租金。多謝支持。"
+            content = "「{carpark_name}」月租車位即將到期: 請前往停車場以已登記八達通繳費。多謝支持。\n\nMonthly parking rent due: Please pay with registered Octopus card at the car park."
             msgid = 5
         else:
             print(
@@ -313,8 +316,17 @@ def send_payment_reminder():
         #logging.info(f"Send SMS params: {params}")
 
         if os.getenv('DEV'):
-            print(f"Mock SMS sent to uid: {contact.user_id}, name: {contact.name}, tel: {contact.number}")
             logging.info(params)
+
+            if counter > 0: # Send test sms
+                print(
+                    f"Mock SMS sent to uid: {contact.user_id}, name: {contact.name}, tel: {contact.number}\nMessage: {content}")
+            else:
+                params['mobileno'] = "852" + os.getenv('TEST_MOBILE_NO')
+                send_sms(params)
+                print(f"Test SMS sent to {os.getenv('TEST_MOBILE_NO')}")
+                counter += 1
+
         else:
             send_sms(params)
 
