@@ -452,13 +452,11 @@ today = datetime.today()
 last_day_of_month = calendar.monthrange(today.year, today.month)[1]
 remaining_days = last_day_of_month - today.day
 #remaining_days = 2  # TODO: Comment this out
-# print("Remaining days:", remaining_days)
+print("Remaining days:", remaining_days)
 
-#if remaining_days == 5 or remaining_days == 2:
-# only send payment reminder to customers if today is NOT the 1st of the month
-if today.day != 1:
+if remaining_days == 5 or today.day == last_day_of_month:
     send_payment_reminder()
 
 # only send unpaid customer summary to staff on 1st day of month and less than 3 days before end of month
-if today.day == 1 or remaining_days <= 3:
+if today.day == 1 or today.day == last_day_of_month:
     email_unpaid_customer_summary()
