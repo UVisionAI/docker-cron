@@ -12,7 +12,20 @@ db = engine.connect()
 Session = sessionmaker(bind=engine)
 session = Session()
 
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
 try:
+    sql = text("""
+        SELECT count(id) as counter FROM user_login_token WHERE expires < DATE_SUB(NOW(), INTERVAL 7 DAY)
+    """)
+
+    cursor = session.execute(sql)
+    user_tokens = cursor.fetchone()
+
+
     # Delete all expired user_login_tokens
     sql = text("""
         DELETE FROM user_login_token WHERE expires < DATE_SUB(NOW(), INTERVAL 7 DAY) 
@@ -21,7 +34,7 @@ try:
 
     session.commit()
 
-    print("Expired user_login_tokens deleted")
+    logging.info(f"{user_tokens.counter} expired user_login_tokens deleted")
 
 except Exception as e:
     logging.error(e)
@@ -40,14 +53,19 @@ cursor = db.engine.execute(sql)
 users = cursor.fetchall()
 
 if not users:
-    print("No users flagged for deletion")
+    logging.info("No users flagged for deletion")
     raise SystemExit(0)
 
-print(f"{len(users)} flagged for deletion")
+logging.info(f"{len(users)} flagged for deletion")
 for user in users:
     try:
         if not user.payment_id: # Only delete user if no payment records exist
             print(f"Deleting user_id: {user.id}")
+            sql = text("""
+                                    DELETE from carpark_waitlist where user_id = :user_id
+                                """).bindparams(user_id=user.id)
+            session.execute(sql)
+
             sql = text("""
                         DELETE from octopus where user_id = :user_id
                     """).bindparams(user_id=user.id)

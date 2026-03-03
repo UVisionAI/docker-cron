@@ -20,6 +20,11 @@ db = None
 remaining_days = None
 today = None
 
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
 def send_sms(params):
     # Send SMS thru API gateway
     response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params)
@@ -71,14 +76,14 @@ def send_email(to, subject, content):
         response = sgrid.send(message)
 
         # print(response.status_code)
-        print(f"Response status code: {response.status_code}")
+        logging.info(f"Response status code: {response.status_code}")
         return True
 
     except HTTPError as e:
         logging.error(e.to_dict)
 
     except Exception as e:
-        print(traceback.format_exc())
+        logging.error(traceback.format_exc())
         logging.error(
             f"Failed to send email to {os.getenv('STAFF_EMAIL')}, content: {content}, error: {e}")
         return False
@@ -97,7 +102,7 @@ def get_supported_carparks():
     if os.getenv('EXCLUDED_CARPARK_IDS') is not None and os.getenv('EXCLUDED_CARPARK_IDS') != "":
         excluded_carpark_ids = os.getenv('EXCLUDED_CARPARK_IDS').split(",")
         exclude_carpark_sql = " AND carpark_id NOT IN :excluded_carpark_ids"
-        print(f"SQL excluded carparks: {excluded_carpark_ids}")
+        logging.info(f"SQL excluded carparks: {excluded_carpark_ids}")
 
     if not exclude_carpark_sql:
         sql = text(f"""
@@ -216,7 +221,7 @@ def send_payment_reminder():
 
     user_count = 0
 
-    print("No of unpaid users: ", len(users))
+    logging.info("No of unpaid users: ", len(users))
     # print("Unpaid users: ", users)
 
     email_summary = ""
@@ -284,7 +289,7 @@ def send_payment_reminder():
             content = "「{carpark_name}」月租車位即將到期。請前往停車場以已登記八達通繳費。多謝支持。Monthly parking rent is due: Please pay with registered Octopus card at the car park."
             msgid = 5
         else:
-            print(
+            logging.info(
                 f"SMS not sent. Neither Octopus or Online payment is accepted by this carpark (id: {contact.carpark_id})")
             continue
 
@@ -374,7 +379,7 @@ def email_unpaid_customer_summary():
     user_count = 0
     user_stats = []
 
-    print("No of unpaid users for summary email: ", len(users))
+    logging.info("No of unpaid users for summary email: ", len(users))
 
     email_content = "<style>td {padding: 5px;}</style>"
     email_content = "現在有{user_count}個月租客還沒付" + last_month.strftime("%-m") + "月的租金：<br/>"
@@ -401,7 +406,7 @@ def email_unpaid_customer_summary():
         contact = db.engine.execute(sql).fetchone()
 
         if contact is None:
-            print("No contact found for user ID: ", u.user_id)
+            logging.info("No contact found for user ID: ", u.user_id)
             continue
 
         user_stats.append({
@@ -439,7 +444,7 @@ def email_unpaid_customer_summary():
         next_month = datetime.today() + relativedelta(months=1)
         send_email(os.getenv('STAFF_EMAIL'), f"沒有支付{next_month.strftime('%Y年%m月')}租金的月租客", email_content)
 
-        print("Unpaid customer summary email sent to staff")
+        logging.info("Unpaid customer summary email sent to staff")
 
 
 # Main program
@@ -452,7 +457,7 @@ today = datetime.today()
 last_day_of_month = calendar.monthrange(today.year, today.month)[1]
 remaining_days = last_day_of_month - today.day
 #remaining_days = 2  # TODO: Comment this out
-print("Remaining days:", remaining_days)
+logging.info(f"Remaining days: {remaining_days}")
 
 if remaining_days == 5 or today.day == last_day_of_month:
     send_payment_reminder()
