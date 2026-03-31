@@ -6,7 +6,6 @@ from sqlalchemy import text, create_engine
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from copy import copy
-import certifi
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -28,7 +27,10 @@ logging.basicConfig(
 
 def send_sms(params):
     # Send SMS thru API gateway
-    response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params, verify=certifi.where())
+    if os.getenv('DEV'):
+        response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params, verify="./onewaysms_full_chain.pem")
+    else:
+        response = requests.get("https://sgateway.onewaysms.com/apichinese20.aspx", params=params, verify="/etc/ssl/certs/onewaysms_full_chain.pem")
 
     if response.content.decode("utf-8") == "-100":  # payment required
         logging.error("One Way SMS API login and password incorrect")
