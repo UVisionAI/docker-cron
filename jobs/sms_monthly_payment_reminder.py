@@ -221,7 +221,7 @@ def send_payment_reminder():
 
     user_count = 0
 
-    logging.info("No of unpaid users: ", len(users))
+    logging.info(f"No of unpaid users: {len(users)}")
     # print("Unpaid users: ", users)
 
     email_summary = ""
