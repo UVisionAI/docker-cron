@@ -12,6 +12,9 @@ shift # Remove the first argument, leaving the rest
 cd /opt/jobs
 source virtualenv/bin/activate
 
+export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
+export REQUESTS_CA_BUNDLE=$SSL_CERT_FILE
+
 if [ ! -f "$SCRIPT_NAME" ]; then
   echo "Error: Script '$SCRIPT_NAME' not found in /opt/jobs/"
   exit 1
